@@ -157,7 +157,10 @@
     </div>
 
     <div class="debt-section">
-      <h3 style="font-size: 1rem; color: var(--accent);">Debts & Liabilities Tracker</h3>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <h3 style="font-size: 1rem; color: var(--accent);">Debts & Liabilities Tracker</h3>
+        <h3 style="font-size: 1rem; color: var(--primary);" id="total-debt-display">Total Debts: ₹0</h3>
+      </div>
       <div class="debt-grid">
         <form onsubmit="handleAddDebt(event)">
           <div class="form-group"><label>Debt Title / Person</label><input type="text" id="debt-title" required placeholder="e.g. Credit Card / John"></div>
@@ -176,10 +179,10 @@
         <thead>
           <tr>
             <th style="width: 70px;">Date</th>
-            <th>Veg / Fruits <small>(Item - Qty - Cost)</small></th>
-            <th>Fish / Meat <small>(Item - Qty - Cost)</small></th>
-            <th>Accessories <small>(Item - Qty - Cost)</small></th>
-            <th>Other Expenses <small>(Item - Qty - Cost)</small></th>
+            <th>Veg / Fruits <small>(e.g. veg-1kg-100, fruit-1kg-100)</small></th>
+            <th>Fish / Meat <small>(e.g. chicken-1kg-250, fish-1kg-200)</small></th>
+            <th>Accessories <small>(e.g. cover-150, glass-200)</small></th>
+            <th>Other Expenses <small>(e.g. petrol-500, tea-50)</small></th>
             <th style="width: 110px;">Daily Total</th>
           </tr>
         </thead>
@@ -322,11 +325,11 @@
       return {
         id: 'sheet_' + Date.now(),
         name: name,
-        debts: [{ id: 1, title: "Sample Loan", amount: 1000 }],
+        debts: [{ id: 1, title: "Sample Loan", amount: 1000, completed: false }],
         rows: Array.from({ length: 28 }, (_, i) => ({
           day: i + 1,
-          veg: i === 0 ? "Apples - 1kg - 200" : "", vegCost: i === 0 ? 200 : 0,
-          meat: i === 0 ? "Chicken - 1kg - 250" : "", meatCost: i === 0 ? 250 : 0,
+          veg: i === 0 ? "veg-1kg-100, fruit-1kg-100" : "", vegCost: i === 0 ? 200 : 0,
+          meat: i === 0 ? "chicken-1kg-250" : "", meatCost: i === 0 ? 250 : 0,
           acc: "", accCost: 0,
           other: "", otherCost: 0
         }))
@@ -390,7 +393,7 @@
       renderSheetTable();
     }
 
-    // Debts Logic
+    // Debts Engine with Complete Checkbox and Total Calculation
     function handleAddDebt(e) {
       e.preventDefault();
       const title = document.getElementById('debt-title').value.trim();
@@ -399,12 +402,22 @@
       const sheet = userState.sheets.find(s => s.id === activeSheetId);
       if (!sheet.debts) sheet.debts = [];
 
-      sheet.debts.push({ id: Date.now(), title, amount });
+      sheet.debts.push({ id: Date.now(), title, amount, completed: false });
       saveSheetsToGoogle();
 
       document.getElementById('debt-title').value = '';
       document.getElementById('debt-amount').value = '';
       renderDebts();
+    }
+
+    function toggleDebtComplete(debtId) {
+      const sheet = userState.sheets.find(s => s.id === activeSheetId);
+      const debt = sheet.debts.find(d => d.id === debtId);
+      if (debt) {
+        debt.completed = !debt.completed;
+        saveSheetsToGoogle();
+        renderDebts();
+      }
     }
 
     function deleteDebt(debtId) {
@@ -420,21 +433,33 @@
       const sheet = userState.sheets.find(s => s.id === activeSheetId);
       if (!sheet.debts) sheet.debts = [];
 
+      let totalActiveDebt = 0;
+
       sheet.debts.forEach(d => {
+        if (!d.completed) totalActiveDebt += d.amount;
+
         container.innerHTML += `
           <div class="debt-item">
-            <span><strong>${d.title}</strong> — ₹${d.amount.toLocaleString()}</span>
+            <div class="debt-info">
+              <input type="checkbox" class="debt-checkbox" ${d.completed ? 'checked' : ''} onchange="toggleDebtComplete(${d.id})">
+              <span class="debt-title ${d.completed ? 'completed' : ''}">
+                <strong>${d.title}</strong> — ₹${d.amount.toLocaleString()}
+              </span>
+            </div>
             <button onclick="deleteDebt(${d.id})" style="background:transparent; border:none; color:var(--danger); cursor:pointer; font-weight:bold;">✕</button>
           </div>
         `;
       });
+
+      document.getElementById('total-debt-display').innerText = `Total Debts: ₹${totalActiveDebt.toLocaleString()}`;
     }
 
-    // Table Logic
+    // Multi-Item Cost Parser (e.g. "veg-1kg-100, fruit-1kg-100" -> 200)
     function parseCost(text) {
       if (!text) return 0;
       const matches = text.match(/\d+(\.\d+)?/g);
-      return matches ? parseFloat(matches[matches.length - 1]) : 0;
+      if (!matches) return 0;
+      return matches.reduce((sum, val) => sum + parseFloat(val), 0);
     }
 
     function updateCell(rowIndex, field, value) {
@@ -499,7 +524,7 @@
     function runAIAnalysis() {
       const sheet = userState.sheets.find(s => s.id === activeSheetId);
       const totalSpent = sheet.rows.reduce((acc, r) => acc + r.vegCost + r.meatCost + r.accCost + r.otherCost, 0);
-      const totalDebts = (sheet.debts || []).reduce((acc, d) => acc + d.amount, 0);
+      const totalDebts = (sheet.debts || []).filter(d => !d.completed).reduce((acc, d) => acc + d.amount, 0);
       const income = userState.incomeData.income;
       const targetSavings = userState.incomeData.targetSavings;
       const netBalance = income - totalSpent - totalDebts;
@@ -511,7 +536,7 @@
         <strong>Monthly Financial Audit:</strong><br>
         • Total Monthly Income: <strong>₹${income.toLocaleString()}</strong><br>
         • Total Expenses Logged: <strong>₹${totalSpent.toLocaleString()}</strong><br>
-        • Total Debt Liabilities: <strong>₹${totalDebts.toLocaleString()}</strong><br>
+        • Active Debt Liabilities: <strong>₹${totalDebts.toLocaleString()}</strong><br>
         • Target Savings Goal: <strong>₹${targetSavings.toLocaleString()}</strong><br>
         • Net Remaining Balance: <strong style="color:${netBalance >= targetSavings ? 'var(--primary)' : 'var(--danger)'}">₹${netBalance.toLocaleString()}</strong><br><br>
         <strong>AI Insight:</strong> `;

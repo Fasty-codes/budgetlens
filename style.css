@@ -15,7 +15,7 @@
 [data-theme="light"] {
   --bg: #f0fdf4;
   --surface: #ffffff;
-  --surface-card: #dc8c2c;
+  --surface-card: #e2e8f0;
   --border: #bbf7d0;
   --primary: #059669;
   --primary-hover: #047857;
@@ -98,7 +98,7 @@ body {
 }
 .theme-toggle-btn:hover { border-color: var(--primary); color: var(--primary); }
 
-/* Inputs */
+/* Form Elements */
 .form-group {
   margin-bottom: 14px;
   text-align: left;
@@ -212,7 +212,7 @@ header {
 }
 .ham-dropdown button:hover { background: var(--surface-card); color: var(--primary); }
 
-/* Main Dynamic Container */
+/* Layout Grid Container */
 main {
   width: 100%;
   max-width: 1200px;
@@ -220,7 +220,7 @@ main {
   padding: 24px 16px;
 }
 
-/* Hero Section */
+/* Hero */
 .hero-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -240,11 +240,7 @@ main {
   line-height: 1.6;
   margin-bottom: 24px;
 }
-.hero-actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 
 /* Dashboard */
 .dash-header {
@@ -311,7 +307,7 @@ main {
   height: 250px;
 }
 
-/* Debts Section */
+/* Debts Tracker with Strikethrough */
 .debt-section {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -326,7 +322,7 @@ main {
   margin-top: 16px;
 }
 .debt-list {
-  max-height: 200px;
+  max-height: 220px;
   overflow-y: auto;
 }
 .debt-item {
@@ -338,8 +334,23 @@ main {
   border-radius: 6px;
   margin-bottom: 8px;
 }
+.debt-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.debt-title.completed {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+.debt-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
 
-/* Responsive Table Component */
+/* Responsive Table */
 .table-wrapper {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -349,7 +360,7 @@ main {
 }
 table {
   width: 100%;
-  min-width: 750px;
+  min-width: 800px;
   border-collapse: collapse;
   text-align: left;
 }
@@ -380,7 +391,7 @@ td input {
 tr.saturday-row { background: rgba(245, 158, 11, 0.03); }
 tr.summary-row { background: var(--surface-card); font-weight: 700; color: var(--accent); }
 
-/* AI Analysis Panel */
+/* AI Analysis Engine Panel */
 .ai-panel {
   background: var(--surface-card);
   border: 1px solid var(--primary);
@@ -403,7 +414,7 @@ tr.summary-row { background: var(--surface-card); font-weight: 700; color: var(-
   line-height: 1.6;
 }
 
-/* Tablet Media Queries (768px and up) */
+/* Breakpoints */
 @media (min-width: 768px) {
   .hero-grid { grid-template-columns: 1fr 1fr; }
   .hero-text h1 { font-size: 3rem; }
@@ -416,22 +427,15 @@ tr.summary-row { background: var(--surface-card); font-weight: 700; color: var(-
   
   .sheet-cards-grid { grid-template-columns: repeat(2, 1fr); }
   .charts-container { grid-template-columns: repeat(2, 1fr); }
-  
   .debt-grid { grid-template-columns: 1fr 2fr; }
   
-  .ai-panel-header {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .sheet-top-bar {
+  .ai-panel-header, .sheet-top-bar {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
   }
 }
 
-/* Desktop Media Queries (1024px and up) */
 @media (min-width: 1024px) {
   .sheet-cards-grid { grid-template-columns: repeat(3, 1fr); }
   .charts-container { grid-template-columns: repeat(3, 1fr); }
