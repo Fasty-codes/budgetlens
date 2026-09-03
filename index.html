@@ -13,7 +13,8 @@
 <body data-theme="dark">
 
   <script>
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0VozFMn38pAcPeEoG-lzx0Ocqee63CABKrSVx_AudJwLb8hx3714zh3DEHELIcSxp/exec";
+    // Replace the old URL with your newly deployed Web App URL:
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyqfdLu4DeceJBBDSdM3tvV89UA4ghs7neYyl-llLbpEsYnFqK07IFqG9nG9Kt0dZA8/exec";
   </script>
 
   <div id="modal-login" class="modal-backdrop hidden">
@@ -393,7 +394,7 @@
       renderSheetTable();
     }
 
-    // Debts Engine with Complete Checkbox and Total Calculation
+    // Debts Engine
     function handleAddDebt(e) {
       e.preventDefault();
       const title = document.getElementById('debt-title').value.trim();
@@ -454,7 +455,7 @@
       document.getElementById('total-debt-display').innerText = `Total Debts: ₹${totalActiveDebt.toLocaleString()}`;
     }
 
-    // Multi-Item Cost Parser (e.g. "veg-1kg-100, fruit-1kg-100" -> 200)
+    // Multi-Item Cost Parser
     function parseCost(text) {
       if (!text) return 0;
       const matches = text.match(/\d+(\.\d+)?/g);
@@ -520,8 +521,8 @@
       updateCharts(sheet.rows, monthAcc);
     }
 
-    // AI Expense Analysis Engine
-    function runAIAnalysis() {
+    // AI Expense Analysis Engine (Proxy through Google Apps Script)
+    async function runAIAnalysis() {
       const sheet = userState.sheets.find(s => s.id === activeSheetId);
       const totalSpent = sheet.rows.reduce((acc, r) => acc + r.vegCost + r.meatCost + r.accCost + r.otherCost, 0);
       const totalDebts = (sheet.debts || []).filter(d => !d.completed).reduce((acc, d) => acc + d.amount, 0);
@@ -531,25 +532,46 @@
 
       const outputBox = document.getElementById('ai-output');
       outputBox.classList.remove('hidden');
+      outputBox.innerHTML = `<em>BudgetLens AI is analyzing your financial data...</em>`;
 
-      let analysisHTML = `
-        <strong>Monthly Financial Audit:</strong><br>
-        • Total Monthly Income: <strong>₹${income.toLocaleString()}</strong><br>
-        • Total Expenses Logged: <strong>₹${totalSpent.toLocaleString()}</strong><br>
-        • Active Debt Liabilities: <strong>₹${totalDebts.toLocaleString()}</strong><br>
-        • Target Savings Goal: <strong>₹${targetSavings.toLocaleString()}</strong><br>
-        • Net Remaining Balance: <strong style="color:${netBalance >= targetSavings ? 'var(--primary)' : 'var(--danger)'}">₹${netBalance.toLocaleString()}</strong><br><br>
-        <strong>AI Insight:</strong> `;
+      const categoryTotals = sheet.rows.reduce((acc, r) => {
+        acc.veg += r.vegCost; acc.meat += r.meatCost;
+        acc.acc += r.accCost; acc.other += r.otherCost;
+        return acc;
+      }, { veg: 0, meat: 0, acc: 0, other: 0 });
 
-      if (netBalance >= targetSavings) {
-        analysisHTML += `Excellent management! Your spending is well-controlled. You are currently meeting your target savings goal of ₹${targetSavings.toLocaleString()}. Consider clearing your ₹${totalDebts.toLocaleString()} debt liability with your extra balance.`;
-      } else if (netBalance > 0) {
-        analysisHTML += `Warning: You have a positive balance of ₹${netBalance.toLocaleString()}, but you are missing your savings target by ₹${(targetSavings - netBalance).toLocaleString()}. Reduce discretionary purchases in Accessories and Other categories.`;
+      const prompt = `
+        Analyze this monthly financial situation:
+        - Income: ₹${income}
+        - Target Savings Goal: ₹${targetSavings}
+        - Total Expenses Logged: ₹${totalSpent}
+        - Total Active Debts: ₹${totalDebts}
+        - Net Remaining Balance: ₹${netBalance}
+        - Category Breakdown:
+          * Veg/Fruits: ₹${categoryTotals.veg}
+          * Meat/Fish: ₹${categoryTotals.meat}
+          * Accessories: ₹${categoryTotals.acc}
+          * Other Expenses: ₹${categoryTotals.other}
+
+        Provide concise, actionable financial advice in 3 short bullet points.
+      `;
+
+      const res = await apiCall({
+        action: "getAIAnalysis",
+        prompt: prompt
+      });
+
+      if (res && res.status === "success") {
+        outputBox.innerHTML = `
+          <strong>Monthly Financial Summary:</strong><br>
+          • Income: <strong>₹${income.toLocaleString()}</strong> | Spent: <strong>₹${totalSpent.toLocaleString()}</strong> | Debts: <strong>₹${totalDebts.toLocaleString()}</strong><br>
+          • Net Balance: <strong style="color:${netBalance >= targetSavings ? 'var(--primary)' : 'var(--danger)'}">₹${netBalance.toLocaleString()}</strong> (Target Savings: ₹${targetSavings.toLocaleString()})<br><br>
+          <strong>AI Recommendations:</strong><br>
+          ${res.text.replace(/\n/g, '<br>')}
+        `;
       } else {
-        analysisHTML += `Critical Notice: You are overspending beyond your income by ₹${Math.abs(netBalance).toLocaleString()}! Review your high-cost daily entries immediately and prioritize paying down your ₹${totalDebts.toLocaleString()} debts.`;
+        outputBox.innerHTML = `<span style="color:var(--danger)">AI Service Connection Error: ${res ? res.message : 'Network failure'}</span>`;
       }
-
-      outputBox.innerHTML = analysisHTML;
     }
 
     // Chart Engine
